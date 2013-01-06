@@ -23,7 +23,7 @@ unless ENV.has_key?('VERBOSE')
   $log = nulllogger
 end
 
-require 'fluent/plugin/out_r18'
+require 'fluent/plugin/out_mysqlslowquerylog'
 
 class Test::Unit::TestCase
 end

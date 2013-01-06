@@ -6,7 +6,7 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
   end
 
   CONFIG = %[
-    add_tag_prefix concated
+    add_tag_prefix concated.
   ]
 
   def create_driver(conf = CONFIG, tag='test')
@@ -16,9 +16,14 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
   def test_emit
     d1 = create_driver
     d2 = create_driver(CONFIG,'test2')
+    d3 = create_driver(CONFIG,'test3')
+    d4 = create_driver(CONFIG,'test4')
 
     d1.run do
-      d2.emit('message' => '# Time: 130105 16:43:42')
+      d1.emit('message' => '/usr/sbin/mysqld, Version: 5.5.28-0ubuntu0.12.04.2-log ((Ubuntu)). started with:')
+      d1.emit('message' => 'Tcp port: 3306  Unix socket: /var/run/mysqld/mysqld.sock')
+      d1.emit('message' => 'Time                 Id Command    Argument')
+      d1.emit('message' => '# Time: 130105 16:43:42')
       d1.emit('message' => '# User@Host: debian-sys-maint[debian-sys-maint] @ localhost []')
       d1.emit('message' => '# Query_time: 0.000167  Lock_time: 0.000057 Rows_sent: 1  Rows_examined: 7')
       d1.emit('message' => 'SET timestamp=1357371822;')
@@ -32,55 +37,68 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
       d2.emit('message' => "select concat('select count(*) into @discard from `',")
       d2.emit('message' => "                    TABLE_SCHEMA, '`.`', TABLE_NAME, '`')")
       d2.emit('message' => "      from information_schema.TABLES where ENGINE='MyISAM';")
-      
     end
+
+    d3.run do
+      d3.emit('message' => "# User@Host: debian-sys-maint[debian-sys-maint] @ localhost []")
+      d3.emit('message' => "# Query_time: 0.014260  Lock_time: 0.000182 Rows_sent: 0  Rows_examined: 808")
+
+      d4.emit('message' => "# User@Host: debian-sys-maint[debian-sys-maint] @ localhost []")
+      d4.emit('message' => "# Query_time: 0.000262  Lock_time: 0.000200 Rows_sent: 0  Rows_examined: 0")
+      d4.emit('message' => "SET timestamp=1357371822;")
+      d4.emit('message' => "select count(*) into @discard from `information_schema`.`EVENTS`;")
+
+      d3.emit('message' => "SET timestamp=1357371822;")
+      d3.emit('message' => "select count(*) into @discard from `information_schema`.`COLUMNS`;")
+    end
+
     assert_equal 1, d1.emits.size
     assert_equal 1, d2.emits.size
-  end
+    assert_equal 2, d3.emits.size
 
-#  def test_emit
-#    d = create_driver
-#    d.run do
-#      d.emit( 'foo' => '{"bar" : "baz"}', 'hoge' => 'fuga' )
-#    end
-#
-#    assert_equal 1, d.emits.size
-#  end
+    assert_equal 'concated.test',  d1.emits[0][0]
+    assert_equal 'concated.test2', d2.emits[0][0]
+    assert_equal 'concated.test4', d3.emits[0][0]
+    assert_equal 'concated.test3', d3.emits[1][0]
 
-  def test_configure
-    #### set configurations
-    # d = create_driver %[
-    #   path test_path
-    #   compress gz
-    # ]
-    #### check configurations
-    # assert_equal 'test_path', d.instance.path
-    # assert_equal :gz, d.instance.compress
-  end
+    assert_equal({
+      :user=>"debian-sys-maint[debian-sys-maint]",
+      :host=>"localhost",
+      :query_time=>0.000167,
+      :lock_time=>5.7e-05,
+      :rows_sent=>1,
+      :rows_examined=>7,
+      :sql=>"SET timestamp=1357371822; SELECT count(*) FROM mysql.user WHERE user='root' and password='';"
+    }, d1.emits[0][2])
 
-  def test_format
-    d = create_driver
+    assert_equal({
+      :user=>"debian-sys-maint[debian-sys-maint]",
+      :host=>"localhost",
+      :query_time=>0.002998,
+      :lock_time=>7.8e-05,
+      :rows_sent=>31,
+      :rows_examined=>81,
+      :sql=>"SET timestamp=61357371822; select concat('select count(*) into @discard from `', TABLE_SCHEMA, '`.`', TABLE_NAME, '`') from information_schema.TABLES where ENGINE='MyISAM';"
+    }, d2.emits[0][2])
 
-    # time = Time.parse("2011-01-02 13:14:15 UTC").to_i
-    # d.emit({"a"=>1}, time)
-    # d.emit({"a"=>2}, time)
+    assert_equal({
+      :user=>"debian-sys-maint[debian-sys-maint]",
+      :host=>"localhost",
+      :query_time=>0.000262,
+      :lock_time=>0.0002,
+      :rows_sent=>0,
+      :rows_examined=>0,
+      :sql=>"SET timestamp=1357371822; select count(*) into @discard from `information_schema`.`EVENTS`;"
+    }, d3.emits[0][2])
 
-    # d.expect_format %[2011-01-02T13:14:15Z\ttest\t{"a":1}\n]
-    # d.expect_format %[2011-01-02T13:14:15Z\ttest\t{"a":2}\n]
-
-    # d.run
-  end
-
-  def test_write
-    d = create_driver
-
-    # time = Time.parse("2011-01-02 13:14:15 UTC").to_i
-    # d.emit({"a"=>1}, time)
-    # d.emit({"a"=>2}, time)
-
-    # ### FileOutput#write returns path
-    # path = d.run
-    # expect_path = "#{TMP_DIR}/out_file_test._0.log.gz"
-    # assert_equal expect_path, path
+    assert_equal({
+      :user=>"debian-sys-maint[debian-sys-maint]",
+      :host=>"localhost",
+      :query_time=>0.01426,
+      :lock_time=>0.000182,
+      :rows_sent=>0,
+      :rows_examined=>808,
+      :sql=>"SET timestamp=1357371822; select count(*) into @discard from `information_schema`.`COLUMNS`;"
+    }, d3.emits[1][2])
   end
 end

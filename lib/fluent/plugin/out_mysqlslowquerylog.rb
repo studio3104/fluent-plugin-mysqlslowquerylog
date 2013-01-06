@@ -48,6 +48,9 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     date   = nil
 
     message = @slowlogs[:"#{tag}"].shift
+    while !message.start_with?('#')
+      message = @slowlogs[:"#{tag}"].shift
+    end
     if message.start_with?('# Time: ')
       date    = Time.parse(message[8..-1].strip)
       message = @slowlogs[:"#{tag}"].shift
@@ -79,6 +82,12 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
 
   def flush_emit(tag, time, record)
     @slowlogs[:"#{tag}"].clear
-    Fluent::Engine.emit(tag, time, record)
+    _tag = tag.clone
+    filter_record(_tag, time, record)
+    if tag != _tag
+      Fluent::Engine.emit(_tag, time, record)
+    else
+      $log.warn "Can not emit message because the tag has not changed. Dropped record #{record}"
+    end
   end
 end
