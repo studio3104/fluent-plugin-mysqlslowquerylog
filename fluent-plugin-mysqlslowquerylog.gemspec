@@ -7,8 +7,8 @@ Gem::Specification.new do |gem|
   gem.version       = "0.0.1"
   gem.authors       = ["Satoshi SUZUKI"]
   gem.email         = ["studio3104.com@gmail.com"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.description   = %q{Fluentd plugin to concat MySQL slowquerylog.}
+  gem.summary       = %q{Fluentd plugin to concat MySQL slowquerylog.}
   gem.homepage      = "https://github.com/studio3104/fluent-plugin-mysqlslowquerylog"
 
   gem.files         = `git ls-files`.split($/)
