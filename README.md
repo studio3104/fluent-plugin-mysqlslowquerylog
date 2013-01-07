@@ -2,9 +2,72 @@
 
 ## Component
 
-## Synopsis
+### MySQL Slow Query Log Output
+
+Fluentd plugin to concat MySQL slowquerylog.
 
 ## Configuration
+
+Input Messages (Slow Query Log)
+```
+# Time: 130107 11:36:21
+# User@Host: root[root] @ localhost []
+# Query_time: 0.000378  Lock_time: 0.000111 Rows_sent: 7  Rows_examined: 7
+SET timestamp=1357526181;
+select * from user;
+# Time: 130107 11:38:47
+# User@Host: root[root] @ localhost []
+# Query_time: 0.002142  Lock_time: 0.000166 Rows_sent: 142  Rows_examined: 142
+use information_schema;
+SET timestamp=1357526327;
+select * from INNODB_BUFFER_PAGE_LRU;
+```
+
+Output Messages
+```
+2013-01-07T11:36:21+09:00    concated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.000378,"lock_time":0.000111,"rows_sent":7,"rows_examined":7,"sql":"SET timestamp=1357526181; select * from user;"}
+2013-01-07T11:38:47+09:00	concated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.002142,"lock_time":0.000166,"rows_sent":142,"rows_examined":142,"sql":"use information_schema; SET timestamp=1357526327; select * from INNODB_BUFFER_PAGE_LRU;"}
+```
+
+### Example Settings
+sender (fluent-agent-lite)
+```
+TAG_PREFIX="mysql"
+LOGS=$(cat <<"EOF"
+slowlog.db01 /var/log/mysql/mysql-slow.log
+EOF
+)
+PRIMARY_SERVER="log_server:24224"
+```
+
+sender (td-agent)
+```
+<source>
+  type tail
+  path   /var/log/mysql/mysql-slow.log
+  format /^(?<message>.+)$/
+  tag    mysql.slowlog.db01
+</source>
+<match>
+  type forward
+  host log_server
+</match>
+```
+
+reciever
+```
+<source>
+  type forward
+</source>
+<match mysql.slowlog.*>
+  type mysqlslowquerylog
+  add_tag_prefix concated.
+</match>
+<match concated.mysql.slowlog.*>
+  type file
+  path /tmp/slowtest
+</match>
+```
 
 ## Installation
 
