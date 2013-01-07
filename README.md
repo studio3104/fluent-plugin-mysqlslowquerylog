@@ -25,8 +25,8 @@ select * from INNODB_BUFFER_PAGE_LRU;
 
 Output Messages
 ```
-2013-01-07T11:36:21+09:00    concated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.000378,"lock_time":0.000111,"rows_sent":7,"rows_examined":7,"sql":"SET timestamp=1357526181; select * from user;"}
-2013-01-07T11:38:47+09:00	concated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.002142,"lock_time":0.000166,"rows_sent":142,"rows_examined":142,"sql":"use information_schema; SET timestamp=1357526327; select * from INNODB_BUFFER_PAGE_LRU;"}
+2013-01-07T11:36:21+09:00    cocatenated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.000378,"lock_time":0.000111,"rows_sent":7,"rows_examined":7,"sql":"SET timestamp=1357526181; select * from user;"}
+2013-01-07T11:38:47+09:00	cocatenated.mysql.slowlog	{"user":"root[root]","host":"localhost","query_time":0.002142,"lock_time":0.000166,"rows_sent":142,"rows_examined":142,"sql":"use information_schema; SET timestamp=1357526327; select * from INNODB_BUFFER_PAGE_LRU;"}
 ```
 
 ### Example Settings
@@ -61,9 +61,9 @@ reciever
 </source>
 <match mysql.slowlog.*>
   type mysqlslowquerylog
-  add_tag_prefix concated.
+  add_tag_prefix cocatenated.
 </match>
-<match concated.mysql.slowlog.*>
+<match cocatenated.mysql.slowlog.*>
   type file
   path /tmp/slowtest
 </match>

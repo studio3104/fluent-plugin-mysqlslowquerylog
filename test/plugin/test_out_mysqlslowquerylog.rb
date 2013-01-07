@@ -6,7 +6,7 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
   end
 
   CONFIG = %[
-    add_tag_prefix concated.
+    add_tag_prefix cocatenated.
   ]
 
   def create_driver(conf = CONFIG, tag='test')
@@ -66,11 +66,11 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
     assert_equal '2013-01-05 16:43:42 +0900', Time.at(d1.emits[0][1]).to_s
     assert_equal '2013-01-05 18:04:21 +0900', Time.at(d2.emits[1][1]).to_s
 
-    assert_equal 'concated.test',  d1.emits[0][0]
-    assert_equal 'concated.test2', d2.emits[0][0]
-    assert_equal 'concated.test2', d2.emits[1][0]
-    assert_equal 'concated.test4', d3.emits[0][0]
-    assert_equal 'concated.test3', d3.emits[1][0]
+    assert_equal 'cocatenated.test',  d1.emits[0][0]
+    assert_equal 'cocatenated.test2', d2.emits[0][0]
+    assert_equal 'cocatenated.test2', d2.emits[1][0]
+    assert_equal 'cocatenated.test4', d3.emits[0][0]
+    assert_equal 'cocatenated.test3', d3.emits[1][0]
 
     assert_equal({
       :user=>"debian-sys-maint[debian-sys-maint]",
