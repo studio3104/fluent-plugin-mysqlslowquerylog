@@ -37,6 +37,13 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
       d2.emit('message' => "select concat('select count(*) into @discard from `',")
       d2.emit('message' => "                    TABLE_SCHEMA, '`.`', TABLE_NAME, '`')")
       d2.emit('message' => "      from information_schema.TABLES where ENGINE='MyISAM';")
+
+      d2.emit('message' => "# Time: 130105 18:04:21")
+      d2.emit('message' => "# User@Host: root[root] @ localhost []")
+      d2.emit('message' => "# Query_time: 0.000398  Lock_time: 0.000117 Rows_sent: 7  Rows_examined: 7")
+      d2.emit('message' => "use mysql;")
+      d2.emit('message' => "SET timestamp=1357376661;")
+      d2.emit('message' => "select * from user;")
     end
 
     d3.run do
@@ -53,11 +60,15 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
     end
 
     assert_equal 1, d1.emits.size
-    assert_equal 1, d2.emits.size
+    assert_equal 2, d2.emits.size
     assert_equal 2, d3.emits.size
+
+    assert_equal '2013-01-05 16:43:42 +0900', Time.at(d1.emits[0][1]).to_s
+    assert_equal '2013-01-05 18:04:21 +0900', Time.at(d2.emits[1][1]).to_s
 
     assert_equal 'concated.test',  d1.emits[0][0]
     assert_equal 'concated.test2', d2.emits[0][0]
+    assert_equal 'concated.test2', d2.emits[1][0]
     assert_equal 'concated.test4', d3.emits[0][0]
     assert_equal 'concated.test3', d3.emits[1][0]
 
@@ -80,6 +91,16 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
       :rows_examined=>81,
       :sql=>"SET timestamp=61357371822; select concat('select count(*) into @discard from `', TABLE_SCHEMA, '`.`', TABLE_NAME, '`') from information_schema.TABLES where ENGINE='MyISAM';"
     }, d2.emits[0][2])
+
+    assert_equal({
+      :user=>"root[root]",
+      :host=>"localhost",
+      :query_time=>0.000398,
+      :lock_time=>0.000117,
+      :rows_sent=>7,
+      :rows_examined=>7,
+      :sql=>"use mysql; SET timestamp=1357376661; select * from user;"
+    }, d2.emits[1][2])
 
     assert_equal({
       :user=>"debian-sys-maint[debian-sys-maint]",

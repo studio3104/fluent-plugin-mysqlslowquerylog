@@ -47,10 +47,13 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     record = {}
     date   = nil
 
+    # Skip the message that is output when after flush-logs or restart mysqld.
+    # e.g.) /usr/sbin/mysqld, Version: 5.5.28-0ubuntu0.12.04.2-log ((Ubuntu)). started with:
     message = @slowlogs[:"#{tag}"].shift
     while !message.start_with?('#')
       message = @slowlogs[:"#{tag}"].shift
     end
+
     if message.start_with?('# Time: ')
       date    = Time.parse(message[8..-1].strip)
       message = @slowlogs[:"#{tag}"].shift
