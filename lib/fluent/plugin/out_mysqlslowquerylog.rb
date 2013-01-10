@@ -2,16 +2,12 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   Fluent::Plugin.register_output('mysqlslowquerylog', self)
   include Fluent::HandleTagNameMixin
 
-  config_param :explain,    :bool,   :default => false
-  config_param :dbuser,     :string, :default => nil
-  config_param :dbpassword, :string, :default => nil
-
   def configure(conf)
     super
-    @slowlogs = Hash.new
+    @slowlogs = {}
 
     if !@remove_tag_prefix && !@remove_tag_suffix && !@add_tag_prefix && !@add_tag_suffix
-      raise ConfigError, "out_slowquery: At least one of option, remove_tag_prefix, remove_tag_suffix, add_tag_prefix or add_tag_suffix is required to be set."
+      raise ConfigError, "out_myslowquerylog: At least one of option, remove_tag_prefix, remove_tag_suffix, add_tag_prefix or add_tag_suffix is required to be set."
     end
   end
 
@@ -25,7 +21,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
 
   def emit(tag, es, chain)
     if !@slowlogs[:"#{tag}"]
-      @slowlogs[:"#{tag}"] = Array.new
+      @slowlogs[:"#{tag}"] = []
     end
     es.each do |time, record|
       concat_messages(tag, time, record)
@@ -37,12 +33,19 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   def concat_messages(tag, time, record)
     record.each do |key, value|
       @slowlogs[:"#{tag}"] << value
-      if value !~ /^set timestamp=\d+\;$/i && value !~ /^use /i && value.end_with?(';')
+      if (
+        !value.start_with?('USE ') &&
+        !value.start_with?('use ') &&
+        !value.start_with?('SET timestamp=') &&
+        value.end_with?(';')
+      )
         parse_message(tag, time)
       end
     end
   end
 
+  REGEX1 = /^#? User\@Host:\s+(\S+)\s+\@\s+(\S+).*/
+  REGEX2 = /^# Query_time: ([0-9.]+)\s+Lock_time: ([0-9.]+)\s+Rows_sent: ([0-9.]+)\s+Rows_examined: ([0-9.]+).*/
   def parse_message(tag, time)
     record = {}
     date   = nil
@@ -59,28 +62,23 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
       message = @slowlogs[:"#{tag}"].shift
     end
 
-    message =~ /^#? User\@Host:\s+(\S+)\s+\@\s+(\S+).*/
-    record[:user] = $1
-    record[:host] = $2
+    message =~ REGEX1
+    record['user'] = $1
+    record['host'] = $2
     message = @slowlogs[:"#{tag}"].shift
 
-    message =~ /^# Query_time: ([0-9.]+)\s+Lock_time: ([0-9.]+)\s+Rows_sent: ([0-9.]+)\s+Rows_examined: ([0-9.]+).*/
-    record[:query_time]    = $1.to_f
-    record[:lock_time]     = $2.to_f
-    record[:rows_sent]     = $3.to_i
-    record[:rows_examined] = $4.to_i
+    message =~ REGEX2
+    record['query_time']    = $1.to_f
+    record['lock_time']     = $2.to_f
+    record['rows_sent']     = $3.to_i
+    record['rows_examined'] = $4.to_i
 
     query = []
-    @slowlogs[:"#{tag}"].each do |m|
-      query << m.strip
-    end
-    record[:sql] = query.join(' ')
+    @slowlogs[:"#{tag}"].map {|m| query << m.strip}
+    record['sql'] = query.join(' ')
 
-    if date
-      flush_emit(tag, date.to_i, record)
-    else
-      flush_emit(tag, time, record)
-    end
+    time = date.to_i if date
+    flush_emit(tag, time, record)
   end
 
   def flush_emit(tag, time, record)
