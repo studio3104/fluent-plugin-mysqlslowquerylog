@@ -33,12 +33,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   def concat_messages(tag, time, record)
     record.each do |key, value|
       @slowlogs[:"#{tag}"] << value
-      if (
-        !value.start_with?('USE ') &&
-        !value.start_with?('use ') &&
-        !value.start_with?('SET timestamp=') &&
-        value.end_with?(';')
-      )
+      if value.end_with?(';') && !value.upcase.start_with?('USE ', 'SET TIMESTAMP=')
         parse_message(tag, time)
       end
     end
@@ -52,10 +47,9 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
 
     # Skip the message that is output when after flush-logs or restart mysqld.
     # e.g.) /usr/sbin/mysqld, Version: 5.5.28-0ubuntu0.12.04.2-log ((Ubuntu)). started with:
-    message = @slowlogs[:"#{tag}"].shift
-    while !message.start_with?('#')
+    begin
       message = @slowlogs[:"#{tag}"].shift
-    end
+    end while !message.start_with?('#')
 
     if message.start_with?('# Time: ')
       date    = Time.parse(message[8..-1].strip)
@@ -73,9 +67,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     record['rows_sent']     = $3.to_i
     record['rows_examined'] = $4.to_i
 
-    query = []
-    @slowlogs[:"#{tag}"].map {|m| query << m.strip}
-    record['sql'] = query.join(' ')
+    record['sql'] = @slowlogs[:"#{tag}"].map {|m| m.strip}.join(' ')
 
     time = date.to_i if date
     flush_emit(tag, time, record)
