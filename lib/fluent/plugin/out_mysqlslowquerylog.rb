@@ -20,7 +20,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   end
 
   def emit(tag, es, chain)
-    if !@slowlogs[:"#{tag}"]
+    if !@slowlogs[:"#{tag}"].instance_of?(Array)
       @slowlogs[:"#{tag}"] = []
     end
     es.each do |time, record|
