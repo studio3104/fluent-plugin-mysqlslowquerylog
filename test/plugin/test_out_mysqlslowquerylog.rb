@@ -126,4 +126,16 @@ class MySQLSlowQueryLogOutputTest < Test::Unit::TestCase
 
     end
   end
+
+ def test_set_dbhandler
+    d = create_driver(%[
+      add_tag_prefix cocatenated.
+      explain true
+      username root
+      password
+      hostname localhost
+    ])
+    d.instance.set_dbhandler
+    assert_equal false, d.instance.host[:connect_fail]
+  end
 end

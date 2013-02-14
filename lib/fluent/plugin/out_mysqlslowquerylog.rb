@@ -2,12 +2,74 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   Fluent::Plugin.register_output('mysqlslowquerylog', self)
   include Fluent::HandleTagNameMixin
 
+  config_param :explain,  :bool,   :default => false
+  config_param :username, :string, :default => nil
+  config_param :password, :string, :default => nil
+  config_param :hostname, :string, :default => nil
+
+  attr_reader :host
+
   def configure(conf)
     super
     @slowlogs = {}
 
     if !@remove_tag_prefix && !@remove_tag_suffix && !@add_tag_prefix && !@add_tag_suffix
       raise ConfigError, "out_myslowquerylog: At least one of option, remove_tag_prefix, remove_tag_suffix, add_tag_prefix or add_tag_suffix is required to be set."
+    end
+
+    if @explain
+      require 'mysql2-cs-bind'
+
+      if @username && @password && @hostname
+        @host = {
+          :hostname     => @hostname,
+          :connect_fail => false,
+          :target_db    => nil
+        }
+      else
+        raise ConfigError, "out_myslowquerylog: In order to explain, username, password and hostname are required to be set."
+      end
+    end
+  end
+
+  def explain(query)
+    if !@host[:mysqlclient] && !@host[:connect_fail]
+      set_dbhandler
+    end
+
+    if @host[:mysqlclient] && !@host[:connect_fail]
+      if query =~ /(select[^\;]+)/i
+        select_statement  = $1
+      end
+      if query =~ /^use ([^\;]+)/i
+        @host[:target_db] = "`#{$1}`"
+      end
+
+      if @host[:target_db]
+        if select_statement
+          @host[:mysqlclient].query("use #{@host[:target_db]}")
+          return @host[:mysqlclient].query("EXPLAIN #{select_statement}").each
+        end
+      else
+        longquerytime = @host[:mysqlclient].query("SELECT VARIABLE_VALUE FROM GLOBAL_VARIABLES WHERE VARIABLE_NAME = 'LONG_QUERY_TIME'").first["VARIABLE_VALUE"].to_f
+        @host[:mysqlclient].query("SELECT SLEEP(#{longquerytime}) -- This query was issued by fluent-plugin-mysqlslowquerylog")
+      end
+    end
+
+    return nil
+  end
+
+  def set_dbhandler
+    begin
+      @host[:mysqlclient] = Mysql2::Client.new(
+        :host     => @host[:hostname],
+        :username => @username,
+        :password => @password,
+        :database => "information_schema"
+      )
+    rescue
+      $log.warn "Can not connect for user '#{@username}'@'#{@host[:hostname]}'."
+      @host[:connect_fail] = true
     end
   end
 
@@ -68,6 +130,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     record['rows_examined'] = $4.to_i
 
     record['sql'] = @slowlogs[:"#{tag}"].map {|m| m.strip}.join(' ')
+    record['explain'] = explain(record['sql']) if @explain
 
     time = date.to_i if date
     flush_emit(tag, time, record)

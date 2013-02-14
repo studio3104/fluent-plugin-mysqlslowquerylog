@@ -15,5 +15,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ["lib"]
 
   gem.add_development_dependency "fluentd"
+  gem.add_development_dependency "mysql2-cs-bind"
   gem.add_runtime_dependency "fluentd"
+  gem.add_runtime_dependency "mysql2-cs-bind"
 end
