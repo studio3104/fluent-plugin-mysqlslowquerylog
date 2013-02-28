@@ -23,6 +23,7 @@ unless ENV.has_key?('VERBOSE')
 end
 
 require 'fluent/plugin/out_mysqlslowquerylog'
+require 'fluent/plugin/out_datacounter'
 
 class Test::Unit::TestCase
 end
