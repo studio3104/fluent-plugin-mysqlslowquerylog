@@ -42,7 +42,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   REGEX1 = /^#? User\@Host:\s+(\S+)\[(\S+)\]\s+\@\s+((\S+)\s+)*\[(\S+)\](\s+Id:\s+(\d+))*.*/
   REGEX2 = /^#? (Thread_id:\s+(\d+)\s+)*Schema:\s+(\S+)\s+Last_errno:\s+(\d+)\s+Killed:\s+(\d+).*/
   REGEX3 = /^#? Query_time:\s+([0-9.]+)\s+Lock_time:\s+([0-9.]+)\s+Rows_sent:\s+([0-9.]+)\s+Rows_examined:\s+([0-9.]+)(\s+Rows_affected:\s+([0-9.]+))*(\s+Rows_read:\s+([0-9.]+))*.*/
-  REGEX4 = /^#? Bytes_sent:\s+(\d+)\s+Tmp_tables:\s+(\d+)\s+Tmp_disk_tables:\s+(\d+)\s+Tmp_table_sizes:\s+(\d+).*/
+  REGEX4 = /^#? Bytes_sent:\s+(\d+)(\s+Tmp_tables:\s+(\d+)\s+Tmp_disk_tables:\s+(\d+)\s+Tmp_table_sizes:\s+(\d+))*.*/
   REGEX5 = /^#? Stored\sroutine:\s+(\S+).*/
   REGEX6 = /^#? InnoDB_trx_id:\s+(\S+).*/
   REGEX7 = /^#? QC_Hit:\s+([a-zA-Z]+)\s+Full_scan:\s+([a-zA-Z]+)\s+Full_join:\s+([a-zA-Z]+)\s+Tmp_table:\s+([a-zA-Z]+)\s+Tmp_table_on_disk:\s+([a-zA-Z]+).*/
@@ -71,15 +71,17 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     record['user_second'] = $2
     record['hostname'] = $4
     record['client_ip'] = $5
-    if $6.to_s != ''
-      record['thread_id'] = $6.to_i
+    if $7.to_s != ''
+      record['thread_id'] = $7.to_i
     end
     message = @slowlogs[:"#{tag}"].shift
 
     if message.include?('Thread_id') || message.include?('Schema')
       message =~ REGEX2
-      if $2.to_s != ''
-        record['thread_id'] = $2.to_i
+      if record['thread_id'] != ''
+        if $2.to_s != ''
+          record['thread_id'] = $2.to_i
+        end
       end
       record['schema'] = $3
       record['last_errno'] = $4.to_i
@@ -105,9 +107,9 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     if message.include?('Bytes_sent')
       message =~ REGEX4
       record['bytes_sent'] = $1.to_i
-      record['tmp_tables'] = $2.to_i
-      record['tmp_disk_tables'] = $3.to_i
-      record['tmp_table_sizes'] = $4.to_i
+      record['tmp_tables'] = $3.to_i
+      record['tmp_disk_tables'] = $4.to_i
+      record['tmp_table_sizes'] = $5.to_i
       message = @slowlogs[:"#{tag}"].shift
     end
 
