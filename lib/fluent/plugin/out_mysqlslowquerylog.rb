@@ -39,7 +39,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     end
   end
 
-  REGEX1 = /^#? User\@Host:\s+(\S+)\[(\S+)\]\s+\@\s+((\S+)\s+)*\[(\S+)\](\s+Id:\s+(\d+))*.*/
+  REGEX1 = /^#? User\@Host:\s+(\S+)\[(\S*)\]\s+\@\s+((\S+)\s+)*\[(\S*)\](\s+Id:\s+(\d+))*.*/
   REGEX2 = /^#? (Thread_id:\s+(\d+)\s+)*Schema:\s+(\S+)\s+Last_errno:\s+(\d+)\s+Killed:\s+(\d+).*/
   REGEX3 = /^#? Query_time:\s+([0-9.]+)\s+Lock_time:\s+([0-9.]+)\s+Rows_sent:\s+([0-9.]+)\s+Rows_examined:\s+([0-9.]+)(\s+Rows_affected:\s+([0-9.]+))*(\s+Rows_read:\s+([0-9.]+))*.*/
   REGEX4 = /^#? Bytes_sent:\s+(\d+)(\s+Tmp_tables:\s+(\d+)\s+Tmp_disk_tables:\s+(\d+)\s+Tmp_table_sizes:\s+(\d+))*.*/
