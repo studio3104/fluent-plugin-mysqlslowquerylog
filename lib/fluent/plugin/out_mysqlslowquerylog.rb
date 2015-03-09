@@ -47,10 +47,12 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
   REGEX6 = /^#? InnoDB_trx_id:\s+(\S+).*/
   REGEX7 = /^#? QC_Hit:\s+([a-zA-Z]+)\s+Full_scan:\s+([a-zA-Z]+)\s+Full_join:\s+([a-zA-Z]+)\s+Tmp_table:\s+([a-zA-Z]+)\s+Tmp_table_on_disk:\s+([a-zA-Z]+).*/
   REGEX8 = /^#? Filesort:\s+([a-zA-Z]+)\s+Filesort_on_disk:\s+([a-zA-Z]+)\s+Merge_passes:\s+(\d+).*/
-  REGEX9 = /^#?\s+InnoDB_IO_r_ops:\s+(\d+)\s+InnoDB_IO_r_bytes:\s+(\d+)\s+InnoDB_IO_r_wait:\s+(\d+\.\d+).*/
-  REGEX10 = /^#?\s+InnoDB_rec_lock_wait:\s+(\d+\.\d+)\s+InnoDB_queue_wait:\s+(\d+\.\d+).*/
+  REGEX9 = /^#?\s+InnoDB_IO_r_ops:\s+(\d+)\s+InnoDB_IO_r_bytes:\s+(\d+)\s+InnoDB_IO_r_wait:\s+([0-9.]+).*/
+  REGEX10 = /^#?\s+InnoDB_rec_lock_wait:\s+([0-9.]+)\s+InnoDB_queue_wait:\s+([0-9.]+).*/
   REGEX11 = /^#?\s+InnoDB_pages_distinct:\s+(\d+).*/
   REGEX12 = /^#?\s+Log_slow_rate_type:\s(\S+)\s+Log_slow_rate_limit:\s+(\d+).*/
+  REGEX13 = /^#? (.*)/
+  REGEX14 = /^#? Profile_total:\s+([0-9.]+)\s+Profile_total_cpu:\s+([0-9.]+).*/
   def parse_message(tag, time)
     record = {}
     date   = nil
@@ -119,6 +121,19 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
       message = @slowlogs[:"#{tag}"].shift
     end
 
+    if message.include?('Profile_starting')
+      message =~ REGEX13
+      record['profiling'] = $1
+      message = @slowlogs[:"#{tag}"].shift
+    end
+
+    if message.include?('Profile_total')
+      message =~ REGEX14
+      record['profile_total'] = $1.to_f
+      record['profile_total_cpu'] = $2.to_f
+      message = @slowlogs[:"#{tag}"].shift
+    end
+
     if message.include?('InnoDB_trx_id')
       message =~ REGEX6
       record['innoDB_trx_id'] = $1
@@ -166,8 +181,8 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
 
     if message.include?('Log_slow_rate_type')
       message =~ REGEX12
-      record['Log_slow_rate_type'] = $1
-      record['Log_slow_rate_limit'] = $2.to_i
+      record['log_slow_rate_type'] = $1
+      record['log_slow_rate_limit'] = $2.to_i
       message = @slowlogs[:"#{tag}"].shift
     end
 
