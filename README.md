@@ -1,4 +1,4 @@
-# fluent-plugin-mysqlslowquerylog
+# fluent-plugin-mysqlslowquerylog, a plugin for [Fluentd](http://fluentd.org)
 
 ## Component
 
