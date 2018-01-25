@@ -1,0 +1,12 @@
+language: ruby
+
+rvm:
+  - 2.1.1
+  - 2.4.3
+
+before_install:
+  - gem update bundler
+  - bundle update
+
+script:
+  - bundle exec rake test
