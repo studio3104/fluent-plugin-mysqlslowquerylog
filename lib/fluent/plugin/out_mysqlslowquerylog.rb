@@ -78,7 +78,7 @@ class Fluent::MySQLSlowQueryLogOutput < Fluent::Output
     _tag = tag.clone
     filter_record(_tag, time, record)
     if tag != _tag
-      Fluent::Engine.emit(_tag, time, record)
+      router.emit(_tag, time, record)
     else
       $log.warn "Can not emit message because the tag has not changed. Dropped record #{record}"
     end
